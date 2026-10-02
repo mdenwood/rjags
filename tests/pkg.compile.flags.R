@@ -1,0 +1,1 @@
+rjags::pkg.compile.flags()

@@ -13,123 +13,57 @@ CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 
 PKG_CONFIG_OK="FALSE"
 
-AC_PATH_PROG([PKG_CONFIG], [pkg-config], [], [$PATH:/usr/local/bin])
+# Note: pkg-config is not installed on vanilla macOS but is provided by the JAGS installers at /opt/jags/versions/pkgconf-lite/current/bin
+AC_PATH_PROG([PKG_CONFIG], [pkg-config], [], [$PATH:/usr/local/bin:/opt/jags/versions/pkgconf-lite/current/bin])
 if test [ -n "${PKG_CONFIG}" ] ; then
-   if `${PKG_CONFIG} --exists jags`; then
+   if `${PKG_CONFIG} --exists jags` || `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists jags`; then
        if `${PKG_CONFIG} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
           `${PKG_CONFIG} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
          JAGS_LIBS=`${PKG_CONFIG} --libs jags`
          JAGS_CFLAGS=`${PKG_CONFIG} --cflags jags`
          JAGS_LIBDIR=`${PKG_CONFIG} --variable libdir jags`
-         if test [ -z "${JAGS_LIBS}" || -z "${JAGS_CFLAGS}" ] ; then
-            AC_MSG_WARN([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config])
+         if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
+            AC_MSG_ERROR([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config])
          else
             AC_MSG_NOTICE([Setting compile and link flags according to pkg-config])
             AC_MSG_NOTICE([Compile flags are $JAGS_CFLAGS])
             AC_MSG_NOTICE([Link flags are $JAGS_LIBS])
-            PKG_CONFIG_OK="TRUE"
          fi
-      else
-         jags_installed_version=`${PKG_CONFIG} --modversion jags`
-         AC_MSG_ERROR([pkg-config found JAGS ${jags_installed_version} but rjags requires JAGS ${PACKAGE_VERSION}.x.y])
-      fi
-   else 
-      AC_MSG_WARN([pkg-config file for jags ${PACKAGE_VERSION} unavailable])
-      AC_MSG_WARN([Consider adding the directory containing `jags.pc`])
-      AC_MSG_WARN([to the PKG_CONFIG_PATH environment variable])
-   fi
-fi
-
-
-########################## Begin legacy configuration #####################
-if test "${PKG_CONFIG_OK}" != TRUE; then
-
-AC_MSG_NOTICE([Attempting legacy configuration of rjags])
-
-# Set JAGS_PREFIX
-#
-# For installations in a non-standard location, set the prefix for
-# JAGS manually, using either option --with-jags-prefix or environment
-# variable JAGS_PREFIX. Otherwise we get the prefix from the jags
-# executable.
-
-AC_ARG_WITH([jags-prefix],
-            AS_HELP_STRING([--with-jags-prefix=PREFIX_PATH],[Prefix used when JAGS was installed]),
-            [jags_prefix_path=$withval], [jags_prefix_path=""])
-if test [ -n "$jags_prefix_path" ] ; then
-   JAGS_PREFIX=${jags_prefix_path}
-else
-   if test [ -z "${JAGS_PREFIX}" ] ; then
-   AC_PATH_PROG(jags_bin_path, [jags])
-   if test -n "$jags_bin_path"; then
-      jags_bin_path=`AS_DIRNAME(["$jags_bin_path"])`
-      JAGS_PREFIX=`AS_DIRNAME(["$jags_bin_path"])`
-   else
-       AC_MSG_ERROR("automatic detection of JAGS failed. Please use pkg-config to locate the JAGS library. See the INSTALL file for details.")
+       # If the first jags.pc on the search path is for the wrong version, try the macOS official installation directory:
+       elif `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
+           `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
+         JAGS_LIBS=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --libs jags`
+         JAGS_CFLAGS=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --cflags jags`
+         JAGS_LIBDIR=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --variable libdir jags`
+         if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
+            AC_MSG_ERROR([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config]
+          [using /opt/jags/${PACKAGE_VERSION}.x-current/lib/pkgconfig])
+         else
+           AC_MSG_NOTICE([Setting compile and link flags according to pkg-config]
+           [using /opt/jags/${PACKAGE_VERSION}.x-current/lib/pkgconfig])
+           AC_MSG_NOTICE([Compile flags are $JAGS_CFLAGS])
+           AC_MSG_NOTICE([Link flags are $JAGS_LIBS])
+         fi
+       else
+         if `${PKG_CONFIG} --exists jags`; then
+           jags_installed_version=`${PKG_CONFIG} --modversion jags`
+           AC_MSG_ERROR([pkg-config found JAGS ${jags_installed_version} but rjags requires JAGS ${PACKAGE_VERSION}.x.y])
+         else
+           # Should never happen unless we have a broken macOS official JAGS installation - but just to be safe:
+           jags_installed_version=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --modversion jags`
+           AC_MSG_ERROR([pkg-config found JAGS ${jags_installed_version} under /opt/jags/lib/pkgconfig-${PACKAGE_VERSION} but rjags requires JAGS ${PACKAGE_VERSION}.x.y]
+           [It seems you have a broken macOS official JAGS installation])
+         fi
        fi
+   else 
+      AC_MSG_ERROR([pkg-config file for jags ${PACKAGE_VERSION} unavailable]
+                   [Try adding the directory containing 'jags.pc']
+                   [to the PKG_CONFIG_PATH environment variable])
    fi
-fi
-
-# Set include path with option --with-jags-includedir or environment
-# variable JAGS_INCLUDEDIR. By default, this is determined from
-# JAGS_PREFIX.
-
-AC_ARG_WITH([jags-includedir],
-            AS_HELP_STRING([--with-jags-includedir=INCLUDE_PATH],[the value of includedir used when JAGS was installed]),
-            [jags_include_path=$withval], [jags_include_path=""])
-if test [ -n "$jags_include_path" ] ; then
-   JAGS_INCLUDEDIR=${jags_include_path}
 else
-   if test [ -z "${JAGS_INCLUDEDIR}" ] ; then
-      JAGS_INCLUDEDIR=${JAGS_PREFIX}/include
-   fi
-fi
-JAGS_PKGINCLUDEDIR=${JAGS_INCLUDEDIR}/JAGS
-
-AC_LANG_PUSH(C++)
-OCPPFLAGS=${CPPFLAGS}
-CPPFLAGS=-I${JAGS_PKGINCLUDEDIR}
-AC_CHECK_HEADER(Console.h, [],
-             [AC_MSG_ERROR("cannot find header file ${JAGS_PKGINCLUDEDIR}/Console.h. Please use pkg-config to locate the JAGS library. See the INSTALL file for details.")])
-CPPFLAGS=${OCPPFLAGS}
-AC_LANG_POP()
-
-# There is no consensus on where 64- versus 32-bit libraries should be
-# installed.  We take a hint from R, assuming that if R is installed
-# in, say, /usr/LIBnn/R then we can find the jags library in
-# ${JAGS_PREFIX}/LIBnn.
-#
-# This is a reasonable assumption if both JAGS and R have been
-# properly packaged, but may not be true if either has been manually
-# installed. The user can set the environment variable LIBnn to
-# override this.
-
-if test -z "${LIBnn}"; then 
-   LIBnn=`"${R_HOME}/bin/R" CMD config LIBnn`
+   AC_MSG_ERROR([pkg-config is required to configure rjags])
 fi
 
-# Set optional library path with option --with-jags-libdir or
-# environment variable JAGS_LIBDIR. By default this is determined by
-# JAGS_PREFIX and LIBnn.
-
-AC_ARG_WITH([jags-libdir],
-            AS_HELP_STRING([--with-jags-libdir=LIB_PATH],[the value of libdir used when JAGS was installed]),
-            [jags_lib_path=$withval])
-if test [ -n "$jags_lib_path" ] ; then
-   JAGS_LIBDIR=$jags_lib_path
-else
-   if test [ -z "${JAGS_LIBDIR}" ] ; then
-      JAGS_LIBDIR=${JAGS_PREFIX}/${LIBnn}
-   fi
-fi
-
-JAGS_CFLAGS="-I${JAGS_PKGINCLUDEDIR}"
-JAGS_LIBS="-L${JAGS_LIBDIR} -ljags"
-AC_MSG_NOTICE([Compile flags are $JAGS_CFLAGS])
-AC_MSG_NOTICE([Link flags are $JAGS_LIBS])
-
-fi
-####################### END legacy configuration ##########################
 
 # Support for private installations of JAGS. If the jags library is not
 # on the linker path then it helps to hard-code the location of JAGS into

@@ -23,7 +23,9 @@ export (
   read.jagsdata,
   read.bugsdata,
   parallel.seeds,
-  jags.version
+  jags.version,
+  pkg.compile.flags,
+  load.pkg.module  
 )
 S3method(print, jags)
 S3method(coef, jags)
