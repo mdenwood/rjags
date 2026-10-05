@@ -9,14 +9,14 @@ CFLAGS=`"${R_HOME}/bin/R" CMD config CFLAGS`
 CXXFLAGS=`"${R_HOME}/bin/R" CMD config CXXFLAGS`
 CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 
-# Try using pkg-config to set compiler flags
-
-PKG_CONFIG_OK="FALSE"
+# Use pkg-config to set compiler flags
 
 # Note: pkg-config is not installed on vanilla macOS but is provided by the JAGS installers at /opt/jags/versions/pkgconf-lite/current/bin
 AC_PATH_PROG([PKG_CONFIG], [pkg-config], [], [$PATH:/usr/local/bin:/opt/jags/versions/pkgconf-lite/current/bin])
 if test [ -n "${PKG_CONFIG}" ] ; then
-   if `${PKG_CONFIG} --exists jags` || `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists jags`; then
+   # The official macOS installer should have the jags.pc file for the correct major version of JAGS here:
+   PKG_CONFIG_PATH_MACOS=`echo "/opt/jags/lib/pkgconfig-${PACKAGE_VERSION}"`
+   if `PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}:${PKG_CONFIG_PATH}" ${PKG_CONFIG} --exists jags`; then
        if `${PKG_CONFIG} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
           `${PKG_CONFIG} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
          JAGS_LIBS=`${PKG_CONFIG} --libs jags`
@@ -30,17 +30,17 @@ if test [ -n "${PKG_CONFIG}" ] ; then
             AC_MSG_NOTICE([Link flags are $JAGS_LIBS])
          fi
        # If the first jags.pc on the search path is for the wrong version, try the macOS official installation directory:
-       elif `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
-           `${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
-         JAGS_LIBS=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --libs jags`
-         JAGS_CFLAGS=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --cflags jags`
-         JAGS_LIBDIR=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --variable libdir jags`
+       elif `PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
+           `PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
+         JAGS_LIBS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --libs jags`
+         JAGS_CFLAGS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --cflags jags`
+         JAGS_LIBDIR=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --variable libdir jags`
          if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
             AC_MSG_ERROR([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config]
-          [using /opt/jags/${PACKAGE_VERSION}.x-current/lib/pkgconfig])
+          [using /opt/jags/lib/pkgconfig-${PACKAGE_VERSION}])
          else
            AC_MSG_NOTICE([Setting compile and link flags according to pkg-config]
-           [using /opt/jags/${PACKAGE_VERSION}.x-current/lib/pkgconfig])
+           [using /opt/jags/lib/pkgconfig-${PACKAGE_VERSION}])
            AC_MSG_NOTICE([Compile flags are $JAGS_CFLAGS])
            AC_MSG_NOTICE([Link flags are $JAGS_LIBS])
          fi
@@ -50,7 +50,7 @@ if test [ -n "${PKG_CONFIG}" ] ; then
            AC_MSG_ERROR([pkg-config found JAGS ${jags_installed_version} but rjags requires JAGS ${PACKAGE_VERSION}.x.y])
          else
            # Should never happen unless we have a broken macOS official JAGS installation - but just to be safe:
-           jags_installed_version=`${PKG_CONFIG} --with-path=/opt/jags/lib/pkgconfig-${PACKAGE_VERSION} --modversion jags`
+           jags_installed_version=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --modversion jags`
            AC_MSG_ERROR([pkg-config found JAGS ${jags_installed_version} under /opt/jags/lib/pkgconfig-${PACKAGE_VERSION} but rjags requires JAGS ${PACKAGE_VERSION}.x.y]
            [It seems you have a broken macOS official JAGS installation])
          fi
@@ -64,44 +64,50 @@ else
    AC_MSG_ERROR([pkg-config is required to configure rjags])
 fi
 
-
 # Support for private installations of JAGS. If the jags library is not
 # on the linker path then it helps to hard-code the location of JAGS into
 # the DSO for rjags. Suggested by Doug Bates, April 2011.
 
+# Options passed to the linker are not portable, so the current version is
+# Linux only. There is scope for adding other platforms with the right
+# incantation.
+
 AC_ARG_ENABLE([rpath],
-            AS_HELP_STRING([--enable-rpath],[Hard link the location of the JAGS library]))
-if test [ "x$enable_rpath" = "xyes"]; then
-   JAGS_RPATH="-Wl,-rpath ${JAGS_LIBDIR}"
+   AS_HELP_STRING([--enable-rpath],[Hard link the location of the JAGS library (Linux only)]))
+if test ["x$enable_rpath" = "xyes"]; then
+   host_os=`uname`;
+   case "${host_os}" in
+      Linux*)
+         JAGS_RPATH="-Wl,-rpath=${JAGS_LIBDIR}"
+      ;;
+   *)
+      AC_MSG_ERROR([Option --enable-rpath is not available for OS $host_os])
+      ;;
+   esac
 fi
 
 # Sanity checks. 
 OLDFLAGS=${LDFLAGS}
-OCFLAGS=${CFLAGS}
-AC_LANG_PUSH(C)
-CFLAGS=${JAGS_CFLAGS}
+OCXXFLAGS=${CXXFLAGS}
+AC_LANG_PUSH(C++)
+CXXFLAGS=${JAGS_CFLAGS}
+LDFLAGS="-L${JAGS_LIBDIR} ${JAGS_RPATH}"
 # Can we link to the library?
-LDFLAGS="-L${JAGS_LIBDIR}"
 AC_CHECK_LIB(jags, jags_version, [],
              [AC_MSG_ERROR("cannot link to JAGS library in ${JAGS_LIBDIR}.")])
-AC_LANG_POP(C)
-CFLAGS=${OCFLAGS}
 # Does the library have the correct major version number?
-AC_LANG_PUSH(C++)
-OCXXFLAGS=${CXXFLAGS}
-CXXFLAGS=${JAGS_CFLAGS}
-LDFLAGS="${JAGS_LIBS} ${JAGS_RPATH}"
-AC_MSG_CHECKING([version of JAGS library])
-# Need to run this trivial test program first to detect runtime linkage problems
+# Need to run this trivial test program first
+AC_MSG_CHECKING([runtime link to JAGS library])
 AC_RUN_IFELSE(
    [AC_LANG_SOURCE([
       #include <version.h>
       int main() { return 0; }])],
-   [],
+   [AC_MSG_RESULT([OK])],
    [AC_MSG_RESULT([link error])
-    AC_MSG_ERROR([Runtime link error: See the INSTALL file for help])],
-   [AC_MSG_RESULT([skipped for cross-compiling])])
+    AC_MSG_ERROR([runtime link error: See the INSTALL file for help])],
+   [AC_MSG_RESULT([skipped for cross compilation])])
 # Now we can test
+AC_MSG_CHECKING([version of JAGS library])
 AC_RUN_IFELSE(
    [AC_LANG_SOURCE([
       #include <version.h>
@@ -109,8 +115,8 @@ AC_RUN_IFELSE(
    [AC_MSG_RESULT([OK])],
    [AC_MSG_RESULT([wrong version])
     AC_MSG_ERROR([rjags requires JAGS version ${PACKAGE_VERSION}.x.y])],
-   [AC_MSG_RESULT([skipped for cross-compiling])])
-AC_LANG_POP()
+   [AC_MSG_RESULT([skipped for cross compilation])])
+AC_LANG_POP(C++)
 LDFLAGS=${OLDFLAGS}
 CXXFLAGS=${OCXXFLAGS}
 
