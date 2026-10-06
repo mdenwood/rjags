@@ -14,9 +14,17 @@ CPPFLAGS=`"${R_HOME}/bin/R" CMD config CPPFLAGS`
 # Note: pkg-config is not installed on vanilla macOS but is provided by the JAGS installers at /opt/jags/versions/pkgconf-lite/current/bin
 AC_PATH_PROG([PKG_CONFIG], [pkg-config], [], [$PATH:/usr/local/bin:/opt/jags/versions/pkgconf-lite/current/bin])
 if test [ -n "${PKG_CONFIG}" ] ; then
-   # The official macOS installer should have the jags.pc file for the correct major version of JAGS here:
-   PKG_CONFIG_PATH_MACOS=`echo "/opt/jags/lib/pkgconfig-${PACKAGE_VERSION}"`
+   # The official macOS installer for JAGS >= 5 should have the jags.pc file for the correct major version of JAGS here:
+   PKG_CONFIG_PATH_MACOS="/opt/jags/lib/pkgconfig-${PACKAGE_VERSION}"
+   # Add legacy path to workaround issue on r-universe for x86_64 macOS:
+   if [ -z "${PKG_CONFIG_PATH}" ]; then
+       export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
+   else
+       export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig"
+   fi
+   # Detect a jags.pc in any possible location:
    if `PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}:${PKG_CONFIG_PATH}" ${PKG_CONFIG} --exists jags`; then
+       # Prefer the version on the default search path:
        if `${PKG_CONFIG} --exists --atleast-version=${PACKAGE_VERSION}.0.0 jags` &&
           `${PKG_CONFIG} --exists --max-version=${PACKAGE_VERSION}.99.99 jags`; then
          JAGS_LIBS=`${PKG_CONFIG} --libs jags`
