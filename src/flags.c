@@ -28,6 +28,9 @@
 #ifndef RJAGS_LIBS
 #error "Compilation failed: RJAGS_LIBS udefined"
 #endif
+#ifndef JAGS_ROOT
+#error "Compilation failed: JAGS_ROOT udefined"
+#endif
 
 #define STRINGIFY(x) #x
 #define SHIM_STRING(x) STRINGIFY(x)
@@ -42,4 +45,8 @@ SEXP get_rjags_cxxflags() {
 
 SEXP get_rjags_libs() {  
   return Rf_mkString(SHIM_STRING(RJAGS_LIBS));
+}
+
+SEXP get_jags_root() {  
+  return Rf_mkString(SHIM_STRING(JAGS_ROOT));
 }

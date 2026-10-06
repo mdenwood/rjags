@@ -27,6 +27,7 @@ extern "C" {
     extern SEXP get_rjags_cppflags();
     extern SEXP get_rjags_cxxflags();
     extern SEXP get_rjags_libs();
+    extern SEXP get_jags_root();
     extern SEXP initialize(SEXP);
     extern SEXP is_adapting(SEXP);
     extern SEXP load_module(SEXP);

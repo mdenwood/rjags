@@ -29,3 +29,13 @@
     library.dynam.unload("rjags", libpath)
 }
 
+### Helper function for pkg.compile.flags
+get.compile.flags <- function(){
+  list(
+    "MAJOR_VERSION"=as.numeric(jags.version()[,1]),
+    "JAGS_ROOT" = .Call("get_jags_root", PACKAGE="rjags"),  # Equivalent to @JAGS_ROOT@
+    "CPPFLAGS" = .Call("get_rjags_cppflags", PACKAGE="rjags"),
+    "CXXFLAGS" = .Call("get_rjags_cxxflags", PACKAGE="rjags"),
+    "LIBS" = .Call("get_rjags_libs", PACKAGE="rjags")
+  )
+}

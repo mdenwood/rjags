@@ -30,6 +30,7 @@ if test [ -n "${PKG_CONFIG}" ] ; then
          JAGS_LIBS=`${PKG_CONFIG} --libs jags`
          JAGS_CFLAGS=`${PKG_CONFIG} --cflags jags`
          JAGS_LIBDIR=`${PKG_CONFIG} --variable libdir jags`
+         JAGS_ROOT=`${PKG_CONFIG} --variable prefix jags`
          if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
             AC_MSG_ERROR([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config])
          else
@@ -43,6 +44,7 @@ if test [ -n "${PKG_CONFIG}" ] ; then
          JAGS_LIBS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --libs jags`
          JAGS_CFLAGS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --cflags jags`
          JAGS_LIBDIR=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --variable libdir jags`
+         JAGS_ROOT=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --variable prefix jags`
          if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
             AC_MSG_ERROR([Cannot get information about jags ${PACKAGE_VERSION} from pkg-config]
           [using /opt/jags/lib/pkgconfig-${PACKAGE_VERSION}])
@@ -136,6 +138,7 @@ AC_SUBST(JAGS_LIBS)
 AC_SUBST(JAGS_CFLAGS)
 AC_SUBST(JAGS_MODDIR)
 AC_SUBST(JAGS_RPATH)
+AC_SUBST(JAGS_ROOT)
 
 AC_CONFIG_FILES([src/Makevars])
 AC_OUTPUT

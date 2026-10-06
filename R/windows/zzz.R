@@ -105,6 +105,9 @@
 
         jags.home <- latest[[1]][["InstallDir"]]
     }
+    ## Save runtime JAGS home into package environment for later use
+    .rjags_env[["JAGS_ROOT"]] <- jags.home
+    
 
 ### Add the JAGS bin to the windows PATH, if not already present
 
@@ -158,4 +161,21 @@
 .onUnload <- function(libpath)
 {
     library.dynam.unload("rjags", libpath)
+}
+
+
+### Helper function and package env for pkg.compile.flags
+.rjags_env <- new.env(parent = emptyenv())
+.rjags_env$JAGS_ROOT <- character(0)
+
+get.compile.flags <- function(){
+  jags_root_compile <- .Call("get_jags_root", PACKAGE="rjags")
+  jags_root_runtime <- .rjags_env$JAGS_ROOT
+  list(
+    "MAJOR_VERSION"=as.numeric(jags.version()[,1]),
+    "JAGS_ROOT" = jags_root_runtime,
+    "CPPFLAGS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_cppflags", PACKAGE="rjags"), fixed=TRUE),
+    "CXXFLAGS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_cxxflags", PACKAGE="rjags"), fixed=TRUE),
+    "LIBS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_libs", PACKAGE="rjags"), fixed=TRUE)
+  )  
 }

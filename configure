@@ -591,6 +591,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+JAGS_ROOT
 JAGS_RPATH
 JAGS_MODDIR
 JAGS_CFLAGS
@@ -1981,6 +1982,7 @@ if test  -n "${PKG_CONFIG}"  ; then
          JAGS_LIBS=`${PKG_CONFIG} --libs jags`
          JAGS_CFLAGS=`${PKG_CONFIG} --cflags jags`
          JAGS_LIBDIR=`${PKG_CONFIG} --variable libdir jags`
+         JAGS_ROOT=`${PKG_CONFIG} --variable prefix jags`
          if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
             as_fn_error $? "Cannot get information about jags ${PACKAGE_VERSION} from pkg-config" "$LINENO" 5
          else
@@ -1997,6 +1999,7 @@ printf '%s\n' "$as_me: Link flags are $JAGS_LIBS" >&6;}
          JAGS_LIBS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --libs jags`
          JAGS_CFLAGS=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --cflags jags`
          JAGS_LIBDIR=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --variable libdir jags`
+         JAGS_ROOT=`PKG_CONFIG_PATH="${PKG_CONFIG_PATH_MACOS}" ${PKG_CONFIG} --variable prefix jags`
          if test -z "${JAGS_LIBS}" || test -z "${JAGS_CFLAGS}" ; then
             as_fn_error $? "Cannot get information about jags ${PACKAGE_VERSION} from pkg-config
           using /opt/jags/lib/pkgconfig-${PACKAGE_VERSION}" "$LINENO" 5
@@ -2732,6 +2735,7 @@ CXXFLAGS=${OCXXFLAGS}
 # Set location of modules
 
 JAGS_MODDIR=${JAGS_LIBDIR}/JAGS/modules-${PACKAGE_VERSION}
+
 
 
 
