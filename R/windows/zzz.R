@@ -105,7 +105,7 @@
 
         jags.home <- latest[[1]][["InstallDir"]]
     }
-    ## Save runtime JAGS home into package environment for later use
+#### Save runtime JAGS home into package environment for later use
     .rjags_env[["JAGS_ROOT"]] <- jags.home
     
 
@@ -172,10 +172,11 @@ get.compile.flags <- function(){
   jags_root_compile <- .Call("get_jags_root", PACKAGE="rjags")
   jags_root_runtime <- .rjags_env$JAGS_ROOT
   list(
-    "MAJOR_VERSION"=as.numeric(jags.version()[,1]),
+    "JAGS_VERSION" = jags.version(),
+    "RJAGS_VERSION" = packageVersion("rjags"),
     "JAGS_ROOT" = jags_root_runtime,
     "CPPFLAGS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_cppflags", PACKAGE="rjags"), fixed=TRUE),
     "CXXFLAGS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_cxxflags", PACKAGE="rjags"), fixed=TRUE),
     "LIBS" = gsub(jags_root_compile, jags_root_runtime, .Call("get_rjags_libs", PACKAGE="rjags"), fixed=TRUE)
-  )  
+  )
 }

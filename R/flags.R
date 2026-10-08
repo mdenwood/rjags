@@ -14,17 +14,13 @@
 ##  http://www.r-project.org/Licenses/
 ##
 
-pkg.compile.flags <- function(type = c("ALL", "MAJOR_VERSION", "JAGS_ROOT", "CPPFLAGS", "CXXFLAGS", "LIBS"), print=type!="ALL")
+pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAGS_VERSION", "CPPFLAGS", "CXXFLAGS", "LIBS"), print=type!="ALL")
 {
 
-  ## TODO: we need an rjags environmental variable for the current path on Windows, and a function that substitutes JAGS_ROOT 
-  ## in the below versions (on Windows only) and returns the runtime JAGS_ROOT (on Windows and unix - get prefix from jags.pc
-  ## in autoconfigure
-  
   flags <- get.compile.flags()
   type <- match.arg(type)
   value <- c(flags, "ALL"=list(flags))[[type]]
-  
+
   if(isTRUE(print)){
     cat(value)
     invisible(value)
@@ -33,43 +29,52 @@ pkg.compile.flags <- function(type = c("ALL", "MAJOR_VERSION", "JAGS_ROOT", "CPP
   }
 }
 
-load.pkg.module <- function(pkg, lib, bin.compat, quiet=FALSE)
+load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
 {
   ## Extract the relevant libs folder:
-  if(missing(lib)){
-    path <- system.file(package = pkg, "libs")      
+  if(missing(libname)){
+    path <- system.file(package = pkgname, "libs")
+    stopifnot(length(path)==1L)
+    if (path=="") {
+      stop("Package ", pkgname, " not found")
+    }
   }else{
-    path <- file.path(lib, pkg, "libs")
-  }
-  stopifnot(length(path)==1L)
-  if (path=="") {
-    stop("Package not found: ", pkg)
+    path <- file.path(libname, pkgname, "libs")
+    stopifnot(length(path)==1L)
+    if (!file.exists(path)) {
+      stop("Package ", pkgname, " not found in library ", libname)
+    }
   }
   if (.Platform$r_arch!="") {
     path <- file.path(path, .Platform$r_arch)
   }
-  if (!file.exists(file.path(path, paste0(pkg, .Platform$dynlib.ext)))) {
-    stop("File not found: ", file.path(path, paste0(pkg, .Platform$dynlib.ext)))
+  if (!file.exists(file.path(path, paste0(pkgname, .Platform$dynlib.ext)))) {
+    stop("File not found: ", file.path(path, paste0(pkgname, .Platform$dynlib.ext)))
   }
-  
+
   ## Check binary compatibility:
   if (missing(bin.compat) || !is.list(bin.compat) ||
-        !"MAJOR_VERSION"%in%names(bin.compat)) {
+        !"JAGS_VERSION"%in%names(bin.compat)) {
     stop("The bin.compat argument must be provided: this should be
       saved within the package namespace using a call to
-      rjags:::pkg.compile.flags(\"BINCOMPAT\") at build time")
+      rjags:::pkg.compile.flags(\"ALL\") at build time")
   }
-  rjags.bin <- pkg.compile.flags("BINCOMPAT")
-  if (bin.compat[["MAJOR_VERSION"]] != rjags.bin[["MAJOR_VERSION"]]) {
-    stop("Mismatched JAGS major versions:\n\t", pkg, ": ", bin.compat[["MAJOR_VERSION"]], "\n\trjags: ", rjags.bin[["MAJOR_VERSION"]], "\nThe ", pkg, " package must either be recompiled or reinstalled following recompilation on CRAN")
+  rjags.bin <- pkg.compile.flags("ALL")
+
+  ## There is scope for additional checks here (e.g. based on parsing PKG_LIBS),
+  ## but for now just check the major version of JAGS:
+  maj.vers.compiled <- as.numeric(bin.compat[["JAGS_VERSION"]][,1])
+  maj.vers.runtime <- as.numeric(rjags.bin[["JAGS_VERSION"]][,1])
+  if (maj.vers.compiled != maj.vers.runtime) {
+    stop("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.compiled, "\n\trjags: ", maj.vers.runtime, "\nThe ", pkgname, " package must either be recompiled or reinstalled following recompilation on CRAN")
   }
-  
+
   ## Try to load the module:
   tryCatch({
-    load.module(pkg, path, quiet)
+    load.module(pkgname, path, quiet)
   }, error = function(x){
-    stop("The ", pkg, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkg, ": ", bin.compat[["LIBS"]], "\n\trjags: ", rjags.bin[["LIBS"]], "\nEnsure that ", pkg, " and rjags are compiled against the same build of JAGS.", call.=FALSE)
+    stop("The ", pkgname, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkgname, ": ", bin.compat[["LIBS"]], "\n\trjags: ", rjags.bin[["LIBS"]], "\nEnsure that ", pkgname, " and rjags are compiled against the same build of JAGS.", call.=FALSE)
   })
-    
-  invisible()  
+
+  invisible()
 }
