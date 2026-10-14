@@ -42,6 +42,13 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
 
 load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
 {
+  ## Check arguments:
+  stopifnot(is.character(pkgname), length(pkgname)==1L, !is.na(pkgname))
+  if (!is.list(bin.compat) || !"JAGS_VERSION"%in%names(bin.compat)) {
+    stop("The bin.compat argument must be provided: this should be\nsaved within the package namespace using a call to\nrjags:::pkg.compile.flags(\"ALL\") at build time", call.=FALSE)
+  }
+  stopifnot(is.logical(quiet), length(quiet)==1L, !is.na(quiet))
+
   ## Extract the relevant libs folder:
   if (missing(libname)){
     path <- system.file(package = pkgname, "libs")
@@ -50,6 +57,7 @@ load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
       stop("Package ", pkgname, " not found", call.=FALSE)
     }
   } else {
+    stopifnot(is.character(libname), length(libname)==1L, !is.na(libname))
     path <- file.path(libname, pkgname, "libs")
     stopifnot(length(path)==1L)
     if (!file.exists(path)) {
@@ -64,14 +72,9 @@ load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
   }
 
   ## Check binary compatibility:
-  if (missing(bin.compat) || !is.list(bin.compat) ||
-        !"JAGS_VERSION"%in%names(bin.compat)) {
-    stop("The bin.compat argument must be provided: this should be\nsaved within the package namespace using a call to\nrjags:::pkg.compile.flags(\"ALL\") at build time", call.=FALSE)
-  }
-  rjags.bin <- pkg.compile.flags("ALL")
-
   ## There is scope for additional checks here (e.g. based on parsing PKG_LIBS),
-  ## but for now just check the major version of JAGS:
+  ## but for now just check the major version of JAGS
+  rjags.bin <- pkg.compile.flags("ALL")
   maj.vers.compiled <- as.numeric(bin.compat[["JAGS_VERSION"]][,1])
   maj.vers.runtime <- as.numeric(rjags.bin[["JAGS_VERSION"]][,1])
   if (maj.vers.compiled != maj.vers.runtime) {
