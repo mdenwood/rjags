@@ -107,7 +107,7 @@
     }
 #### Save runtime JAGS home into package environment for later use
     .rjags_env[["JAGS_ROOT"]] <- jags.home
-    
+
 
 ### Add the JAGS bin to the windows PATH, if not already present
 
@@ -122,8 +122,12 @@
         }
     }
 
-### Load the rjags dll
-    library.dynam("rjags", pkg, lib)
+### Load the rjags dll with error info:
+    tryCatch ({
+      library.dynam("rjags", pkg, lib)
+    }, error = function(e){
+      stop("An unexpected error occured while linking to the JAGS installation at\n\t", jags.home, "\n\tMake sure that your JAGS installation and R installation are binary\n\tcompatible (your current R platform is ", R.Version()$platform, ").\n\n\tThe error returned from library.dynam(...) was:\n\t", conditionMessage(e), call.=FALSE)
+    })
 
 ### Set the module directory, if the option jags.moddir is not already set
 
@@ -139,8 +143,14 @@
              "rjags is looking for the JAGS modules in\n", moddir,
              "\nbut this folder does not exist\n")
     }
-    load.module("basemod", quiet=TRUE)
-    load.module("bugs", quiet=TRUE)
+
+### Try to load the modules with error info:
+    tryCatch ({
+      load.module("basemod", quiet=TRUE)
+      load.module("bugs", quiet=TRUE)
+    }, error = function(e){
+      stop("An unexpected error occured while loading rjags modules at\n\t", moddir, "\n\tMake sure that your JAGS installation and R installation are binary\n\tcompatible (your current R platform is ", R.Version()$platform, ").\n\n\tThe error returned from load.module(...) was:\n\t", conditionMessage(e), call.=FALSE)
+    })
 
 ### Set progress bar type
 

@@ -17,7 +17,7 @@ if test [ -n "${PKG_CONFIG}" ] ; then
    # The official macOS installer for JAGS >= 5 should have the jags.pc file for the correct major version of JAGS here:
    PKG_CONFIG_PATH_MACOS="/opt/jags/lib/pkgconfig-${PACKAGE_VERSION}"
    # Add legacy path to workaround issue on r-universe for x86_64 macOS:
-   if [ -z "${PKG_CONFIG_PATH}" ]; then
+   if test [ -z "${PKG_CONFIG_PATH}" ]; then
        export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
    else
        export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/lib/pkgconfig"

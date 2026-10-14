@@ -7,7 +7,8 @@
   same version of JAGS that rjags itself uses.
 }
 \usage{
-pkg.compile.flags(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAGS_VERSION", "CPPFLAGS", "CXXFLAGS", "LIBS"), print=type!="ALL")
+pkg.compile.flags(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAGS_VERSION",
+  "CPPFLAGS", "CXXFLAGS", "LIBS"), print=type!="ALL")
 }
 \arguments{
   \item{type}{the compile flag to display (see value)}
@@ -32,6 +33,9 @@ pkg.compile.flags(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAGS_VERSION", 
     \item{CXXFLAGS}{The required PKG_CXXFLAGS (may be empty).}
     \item{LIBS}{The required PKG_LIBS.}
   }
+}
+\examples{
+pkg.compile.flags()
 }
 \author{Matt Denwood}
 \keyword{utilities}

@@ -18,13 +18,24 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
 {
 
   flags <- get.compile.flags()
+
+  ## For compatibility with JAGS 4->5 transition on macOS:
+  if (.Platform$OS.type=="unix" &&
+      as.numeric(flags$JAGS_VERSION[,1])==4 &&
+      flags[["CPPFLAGS"]] == "-I/usr/local/include/JAGS" &&
+      !dir.exists("/usr/local/include/JAGS") &&
+      dir.exists("/opt/jags/versions/jags/current-4/include/JAGS")
+  ) {
+    flags[["CPPFLAGS"]] <- "-I/opt/jags/versions/jags/current-4/include/JAGS"
+  }
+
   type <- match.arg(type)
   value <- c(flags, "ALL"=list(flags))[[type]]
 
-  if(isTRUE(print)){
+  if (isTRUE(print)){
     cat(value)
     invisible(value)
-  }else{
+  } else {
     return(value)
   }
 }
@@ -32,32 +43,30 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
 load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
 {
   ## Extract the relevant libs folder:
-  if(missing(libname)){
+  if (missing(libname)){
     path <- system.file(package = pkgname, "libs")
     stopifnot(length(path)==1L)
     if (path=="") {
-      stop("Package ", pkgname, " not found")
+      stop("Package ", pkgname, " not found", call.=FALSE)
     }
-  }else{
+  } else {
     path <- file.path(libname, pkgname, "libs")
     stopifnot(length(path)==1L)
     if (!file.exists(path)) {
-      stop("Package ", pkgname, " not found in library ", libname)
+      stop("Package ", pkgname, " not found in library ", libname, call.=FALSE)
     }
   }
   if (.Platform$r_arch!="") {
     path <- file.path(path, .Platform$r_arch)
   }
   if (!file.exists(file.path(path, paste0(pkgname, .Platform$dynlib.ext)))) {
-    stop("File not found: ", file.path(path, paste0(pkgname, .Platform$dynlib.ext)))
+    stop("File not found: ", file.path(path, paste0(pkgname, .Platform$dynlib.ext)), call.=FALSE)
   }
 
   ## Check binary compatibility:
   if (missing(bin.compat) || !is.list(bin.compat) ||
         !"JAGS_VERSION"%in%names(bin.compat)) {
-    stop("The bin.compat argument must be provided: this should be
-      saved within the package namespace using a call to
-      rjags:::pkg.compile.flags(\"ALL\") at build time")
+    stop("The bin.compat argument must be provided: this should be\nsaved within the package namespace using a call to\nrjags:::pkg.compile.flags(\"ALL\") at build time", call.=FALSE)
   }
   rjags.bin <- pkg.compile.flags("ALL")
 
@@ -66,14 +75,14 @@ load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
   maj.vers.compiled <- as.numeric(bin.compat[["JAGS_VERSION"]][,1])
   maj.vers.runtime <- as.numeric(rjags.bin[["JAGS_VERSION"]][,1])
   if (maj.vers.compiled != maj.vers.runtime) {
-    stop("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.compiled, "\n\trjags: ", maj.vers.runtime, "\nThe ", pkgname, " package must either be recompiled or reinstalled following recompilation on CRAN")
+    stop("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.compiled, "\n\trjags: ", maj.vers.runtime, "\nThe ", pkgname, " package must either be recompiled or reinstalled\nfollowing recompilation on CRAN.", call.=FALSE)
   }
 
   ## Try to load the module:
-  tryCatch({
+  tryCatch ({
     load.module(pkgname, path, quiet)
-  }, error = function(x){
-    stop("The ", pkgname, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkgname, ": ", bin.compat[["LIBS"]], "\n\trjags: ", rjags.bin[["LIBS"]], "\nEnsure that ", pkgname, " and rjags are compiled against the same build of JAGS.", call.=FALSE)
+  }, error = function(e){
+    stop("The ", pkgname, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkgname, ": ", bin.compat[["LIBS"]], "\n\trjags: ", rjags.bin[["LIBS"]], "\nEnsure that ", pkgname, " and rjags are compiled against the same build of JAGS.\n\nThe error returned from load.module() was:\n", conditionMessage(e), call.=FALSE)
   })
 
   invisible()
