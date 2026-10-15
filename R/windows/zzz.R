@@ -3,7 +3,7 @@
     ## Check that folder jags.home actually exists and contains the DLL
     ## in the appropriate sub-folder.
 
-    ## Registry entries created by the JAGS instsaller may be invalid
+    ## Registry entries created by the JAGS installer may be invalid
     ## if the user removes JAGS by manually deleting files rather than
     ## using the uninstaller. So this function is used to check that
     ## the installation still exists.
@@ -78,7 +78,7 @@
     if (nchar(jags.home) > 0) {
         if (!.check.jags.home(jags.home, jags.major)) {
             stop("The environment variable JAGS_HOME is set to\n", jags.home,
-                 "\nbut no JAGS installation can be found there\n")
+                 "\nbut no JAGS ", jags.major, ".x.y installation can be found there\n")
         }
     }
     else {
@@ -126,7 +126,7 @@
     tryCatch ({
       library.dynam("rjags", pkg, lib)
     }, error = function(e){
-      stop("An unexpected error occured while linking to the JAGS installation at\n\t", jags.home, "\n\tMake sure that your JAGS installation and R installation are binary\n\tcompatible (your current R platform is ", R.Version()$platform, ").\n\n\tThe error returned from library.dynam(...) was:\n\t", conditionMessage(e), call.=FALSE)
+      stop("An unexpected error occured while linking to the JAGS installation at\n\t", jags.home, "\n\tMake sure that you have a JAGS ", jags.major, ".x.y installation that is binary\n\tcompatible with your R installation (your current R platform is\n\t", R.Version()$platform, ").\n\n\tThe error returned from library.dynam(...) was:\n\t", conditionMessage(e), call.=FALSE)
     })
 
 ### Set the module directory, if the option jags.moddir is not already set
@@ -150,7 +150,7 @@
       load.module("basemod", quiet=TRUE)
       load.module("bugs", quiet=TRUE)
     }, error = function(e){
-      stop("An unexpected error occured while loading rjags modules at\n\t", moddir, "\n\tMake sure that your JAGS installation and R installation are binary\n\tcompatible (your current R platform is ", R.Version()$platform, ").\n\n\tThe error returned from load.module(...) was:\n\t", conditionMessage(e), call.=FALSE)
+      stop("An unexpected error occured while loading rjags modules at\n\t", moddir, "\n\tMake sure that you have a JAGS ", jags.major, ".x.y installation that is binary\n\tcompatible with your R installation (your current R platform is\n\t", R.Version()$platform, ").\n\n\tThe error returned from load.module(...) was:\n\t", conditionMessage(e), call.=FALSE)
     })
 
 ### Set progress bar type
