@@ -12,7 +12,7 @@
   from other R packages containing JAGS modules and checks for binary
   compatibility between rjags and the indicated package (given by the
   name argument) before loading the module embedded within the package.
-  Note that this would normally be done in the .onLoad function.
+  Note that this would normally be done in the .onAttach function.
 }
 \usage{
 load.module(name, path, quiet=FALSE)
