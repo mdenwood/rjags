@@ -26,7 +26,9 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
       !dir.exists("/usr/local/include/JAGS") &&
       dir.exists("/opt/jags/versions/jags/current-4/include/JAGS")
   ) {
+    flags[["JAGS_ROOT"]] <- "-I/opt/jags/versions/jags/current-4"
     flags[["CPPFLAGS"]] <- "-I/opt/jags/versions/jags/current-4/include/JAGS"
+    flags[["LIBS"]] <- "-L/opt/jags/versions/jags/current-4/lib -ljags"
   }
 
   type <- match.arg(type)
@@ -40,13 +42,45 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
   }
 }
 
+check.bin.compat <- function(bin.rjags, bin.compat, pkgname, stop.on.error=TRUE){
+
+  if (!is.list(bin.compat) || !"JAGS_VERSION"%in%names(bin.compat) || !"JAGS_ROOT"%in%names(bin.compat)) {
+    stop("The bin.compat argument must be provided: this should be\nsaved within the package namespace using a call to\nrjags:::pkg.compile.flags(\"ALL\") at build time", call.=FALSE)
+  }
+  stopifnot(is.list(bin.rjags), "JAGS_VERSION"%in%names(bin.rjags), "JAGS_ROOT"%in%names(bin.rjags))
+  stopifnot(is.character(pkgname), length(pkgname)==1L, !is.na(pkgname))
+
+  ## There is scope for additional checks here (e.g. based on parsing PKG_LIBS),
+  ## but for now just check the major version of JAGS and (on unix) JAGS_ROOT
+
+  msg <- NULL
+
+  maj.vers.pkg <- as.numeric(bin.compat[["JAGS_VERSION"]][,1])
+  maj.vers.runtime <- as.numeric(bin.rjags[["JAGS_VERSION"]][,1])
+  stopifnot(!is.na(maj.vers.pkg), length(maj.vers.pkg)==1L, !is.na(maj.vers.pkg), length(maj.vers.runtime)==1L)
+  if (maj.vers.pkg != maj.vers.runtime) {
+    msg <- c(msg, paste0("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.pkg, "\n\trjags: ", maj.vers.runtime))
+  }
+
+  if (.Platform$OS.type=="unix") {
+    jags.root.pkg <- bin.compat[["JAGS_ROOT"]]
+    jags.root.rjags <- bin.rjags[["JAGS_ROOT"]]
+    stopifnot(is.character(jags.root.pkg), !is.na(jags.root.pkg), length(jags.root.pkg)==1L, is.character(jags.root.rjags), !is.na(jags.root.rjags), length(jags.root.rjags)==1L)
+    if (jags.root.pkg != jags.root.rjags) {
+      msg <- c(msg, paste0("Mismatched JAGS_ROOT variables:\n\t", pkgname, ": ", jags.root.pkg, "\n\trjags: ", jags.root.rjags))
+    }
+  }
+
+  if (length(msg)>0L && isTRUE(stop.on.error)) {
+    stop("rjags/", pkgname, " package incompatibility detected:\n\n", paste0(msg, collapse="\n\n"), "\n\nThe ", pkgname, " package must either be recompiled or reinstalled\nfollowing recompilation on CRAN.", call.=FALSE)
+  }
+  return(msg)
+}
+
 load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
 {
   ## Check arguments:
   stopifnot(is.character(pkgname), length(pkgname)==1L, !is.na(pkgname))
-  if (!is.list(bin.compat) || !"JAGS_VERSION"%in%names(bin.compat)) {
-    stop("The bin.compat argument must be provided: this should be\nsaved within the package namespace using a call to\nrjags:::pkg.compile.flags(\"ALL\") at build time", call.=FALSE)
-  }
   stopifnot(is.logical(quiet), length(quiet)==1L, !is.na(quiet))
 
   ## Extract the relevant libs folder:
@@ -72,20 +106,14 @@ load.pkg.module <- function(pkgname, libname, bin.compat, quiet=FALSE)
   }
 
   ## Check binary compatibility:
-  ## There is scope for additional checks here (e.g. based on parsing PKG_LIBS),
-  ## but for now just check the major version of JAGS
-  rjags.bin <- pkg.compile.flags("ALL")
-  maj.vers.compiled <- as.numeric(bin.compat[["JAGS_VERSION"]][,1])
-  maj.vers.runtime <- as.numeric(rjags.bin[["JAGS_VERSION"]][,1])
-  if (maj.vers.compiled != maj.vers.runtime) {
-    stop("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.compiled, "\n\trjags: ", maj.vers.runtime, "\nThe ", pkgname, " package must either be recompiled or reinstalled\nfollowing recompilation on CRAN.", call.=FALSE)
-  }
+  bin.rjags <- pkg.compile.flags("ALL")
+  check.bin.compat(bin.rjags, bin.compat, pkgname)
 
   ## Try to load the module:
   tryCatch ({
     load.module(pkgname, path, quiet)
   }, error = function(e){
-    stop("The ", pkgname, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkgname, ": ", bin.compat[["LIBS"]], "\n\trjags: ", rjags.bin[["LIBS"]], "\nEnsure that ", pkgname, " and rjags are compiled against the same build of JAGS.\n\nThe error returned from load.module() was:\n", conditionMessage(e), call.=FALSE)
+    stop("The ", pkgname, " module failed to load for an unknown reason.\nIt may help to inspect the following PKG_LIB for mismatches:\n\t", pkgname, ": ", bin.compat[["LIBS"]], "\n\trjags: ", bin.rjags[["LIBS"]], "\nEnsure that ", pkgname, " and rjags are compiled against the same build of JAGS.\n\nThe error returned from load.module() was:\n", conditionMessage(e), call.=FALSE)
   })
 
   invisible()
