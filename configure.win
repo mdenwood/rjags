@@ -13,6 +13,10 @@ fi
 # strip any trailing version-specific folder:
 if [ ! -z "${JAGS_ROOT}" ]; then
   echo "Found env var JAGS_ROOT=${JAGS_ROOT}"
+
+  # TODO: first check for include/version.h in the JAGS_ROOT provided, and
+  # if it matches what we need then just use this JAGS_ROOT unmodified
+
   JAGS_BASE=$(echo "$JAGS_ROOT" | sed 's/\\/\//g' | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//')
   echo "Using JAGS_ROOT=${JAGS_BASE}"
 fi
