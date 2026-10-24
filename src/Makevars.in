@@ -1,3 +1,9 @@
+## Important note for authors of R packages implementing JAGS modules:
+## DO NOT copy this file as part of your own package, as we now
+## have a simplified configuration mechanism for R packages compiling
+## against JAGS and importing rjags.  See the JAGS developer manual.
+##    - Matt Denwood, 2026-10-24
+
 PKG_LIBS = @JAGS_LIBS@ @JAGS_RPATH@
 PKG_CXXFLAGS = 
 PKG_CPPFLAGS = @JAGS_CFLAGS@

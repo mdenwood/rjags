@@ -1,7 +1,11 @@
-JAGS_ROOT ?= "/c/progra~1/JAGS/JAGS-4.3.0"
+## Important note for authors of R packages implementing JAGS modules:
+## DO NOT copy this file as part of your own package, as we now
+## have a simplified configuration mechanism for R packages compiling
+## against JAGS and importing rjags.  See the JAGS developer manual.
+##    - Matt Denwood, 2026-10-24
 
 # Prevent the compiler warning about an unrecognised escape sequence:
-JAGS_ROOT_SUBST := $(subst \,/,$(JAGS_ROOT))
+JAGS_ROOT_SUBST := $(subst \,/,$(@JAGS_ROOT@))
 
 PKG_LIBS = -L"$(JAGS_ROOT_SUBST)/${R_ARCH}/bin" -ljags-4
 PKG_CXXFLAGS = -D_GLIBCXX_USE_CXX11_ABI=0
