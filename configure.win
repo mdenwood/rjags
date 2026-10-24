@@ -18,6 +18,8 @@
 ## deduced parent directory that matches the necessary major version
 ##    - Matt Denwood, 2026-10-24
 
+echo "\n##### RUNNING CONFIGURE.WIN #####"
+
 # Extract the JAGS major number from configue.ac:
 if [ -f configure.ac ]; then
   JAGS_MAJOR=$(sed -n 's/^AC_INIT(\[[^]]*\],\[\([0-9]*\)\].*/\1/p' configure.ac)
@@ -44,7 +46,7 @@ if [ ! -z "${JAGS_ROOT}" ]; then
       JAGS_BASE=""
     else
       # We have JAGS_ROOT set to the wrong version - try going up a directory:
-      JAGS_BASE=$(echo "${JAGS_ROOT}" | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//')
+      JAGS_BASE=$(echo "${JAGS_ROOT}" | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//' | sed -E 's/\/JAGS [0-9].*//')
       echo "The variable JAGS_ROOT is set for the wrong major version (${INSTALLED_MAJOR})"
       echo "Looking for a JAGS ${JAGS_MAJOR} installation in:\n ${JAGS_BASE}"
     fi
@@ -95,10 +97,32 @@ if [ ! -z "${JAGS_BASE}" ]; then
   fi
 fi
 
+if [ -f "src/Makevars.win" ]; then
+    echo "ERROR: src/Makevars.win exists - run cleanup.win and try again" >&2
+    exit 1
+fi
+if [ -f "src/Makevars.ucrt" ]; then
+    echo "ERROR: src/Makevars.ucrt exists - run cleanup.win and try again" >&2
+    exit 1
+fi
 
 # If we have succeeded, print an information message and update Makevars.win/ucrt.in:
-echo "Found JAGS version ${JAGS_MAJOR} at: $JAGS_ROOT"
-sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.win.in > src/Makevars.win
-sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.ucrt.in > src/Makevars.ucrt
+echo "Using JAGS version ${JAGS_MAJOR} at: $JAGS_ROOT"
+sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.win.in > src/Makevars.win
+sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.ucrt.in > src/Makevars.ucrt
+
+if [ ! -f "src/Makevars.win" ]; then
+    echo "ERROR: src/Makevars.win was not created" >&2
+    exit 1
+fi
+if [ ! -f "src/Makevars.ucrt" ]; then
+    echo "ERROR: src/Makevars.ucrt was not created" >&2
+    exit 1
+fi
+
+echo "src/Makevars.win/ucrt created - contents of Makevars.ucrt below:\n"
+cat src/Makevars.win
+
+echo "\n##### END CONFIGURE.WIN #####\n"
 
 exit 0

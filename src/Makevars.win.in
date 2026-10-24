@@ -4,8 +4,8 @@
 ## against JAGS and importing rjags.  See the JAGS developer manual.
 ##    - Matt Denwood, 2026-10-24
 
-# Prevent the compiler warning about an unrecognised escape sequence:
-JAGS_ROOT_SUBST := $(subst \,/,$(@JAGS_ROOT@))
+# Ensure immediate evaluation of JAGS_ROOT provided by configure.win
+JAGS_ROOT_SUBST := $(abspath "@JAGS_ROOT@")
 
 PKG_LIBS = -L"$(JAGS_ROOT_SUBST)/${R_ARCH}/bin" -ljags-4
 PKG_CXXFLAGS = -D_GLIBCXX_USE_CXX11_ABI=0
