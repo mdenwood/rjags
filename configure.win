@@ -1,28 +1,66 @@
 #!/bin/sh
 
+## Configure script for Windows
+## We attempt to locate JAGS using options in the following order:
+## 1. If JAGS_ROOT is set then we first look for include/JAGS/version.h
+## and if the major version matches what we need, we use JAGS_ROOT unmodified.
+## This allows configuration in the legacy way i.e to a specific, versioned
+## JAGS installation.
+## 2. If JAGS_ROOT is set but include/JAGS/version.h indicates the wrong major
+## version, we strip the last directory from the path to attempt to locate the
+## parent directory. This is mostly to support the transition from JAGS 4 to
+## JAGS 5 without needing to modify any environmental variables.
+## 3. If JAGS_ROOT is set but include/JAGS/version.h is not found, then we
+## assume this already represents the parent directory.
+## 4. If JAGS_ROOT is not set, we try the default installation paths of
+## C:/Program Files/JAGS and C:/Program Files (x86)/JAGS
+## 5. For 2-4, we then find the the latest JAGS release inside the provided or
+## deduced parent directory that matches the necessary major version
+##    - Matt Denwood, 2026-10-24
+
 # Extract the JAGS major number from configue.ac:
 if [ -f configure.ac ]; then
   JAGS_MAJOR=$(sed -n 's/^AC_INIT(\[[^]]*\],\[\([0-9]*\)\].*/\1/p' configure.ac)
 fi
-if [ -z "$JAGS_MAJOR" ]; then
+if [ -z "${JAGS_MAJOR}" ]; then
   echo "ERROR: Parsing JAGS_MAJOR from configure.ac failed" >&2
   exit 1
 fi
 
-# If JAGS_ROOT is non-empty then convert backslashes to forward slashes and
-# strip any trailing version-specific folder:
+# If JAGS_ROOT is non-empty then use it:
 if [ ! -z "${JAGS_ROOT}" ]; then
+
   echo "Found env var JAGS_ROOT=${JAGS_ROOT}"
 
-  # TODO: first check for include/version.h in the JAGS_ROOT provided, and
-  # if it matches what we need then just use this JAGS_ROOT unmodified
+  # Normalise path:
+  JAGS_ROOT=$(echo "${JAGS_ROOT}" | sed 's/\\/\//g')
 
-  JAGS_BASE=$(echo "$JAGS_ROOT" | sed 's/\\/\//g' | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//')
-  echo "Using JAGS_ROOT=${JAGS_BASE}"
-fi
+  # Scrape information from the installed header file (if present):
+  INSTALLED_VERSION="${JAGS_ROOT}/include/JAGS/version.h"
+  if [ -f "$INSTALLED_VERSION" ]; then
+    INSTALLED_MAJOR=$(sed -n 's/^#define JAGS_MAJOR  *\([0-9]*\).*/\1/p' "${INSTALLED_VERSION}")
+    if [ "${INSTALLED_MAJOR}" == "${JAGS_MAJOR}" ]; then
+      # Ensure JAGS_BASE is not set:
+      JAGS_BASE=""
+    else
+      # We have JAGS_ROOT set to the wrong version - try going up a directory:
+      JAGS_BASE=$(echo "${JAGS_ROOT}" | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//')
+      echo "The variable JAGS_ROOT is set for the wrong major version (${INSTALLED_MAJOR})"
+      echo "Looking for a JAGS ${JAGS_MAJOR} installation in:\n ${JAGS_BASE}"
+    fi
+  else
+    if [ -d "${JAGS_ROOT}" ]; then
+      # Assume that JAGS_ROOT is set to the parent dir (we will check below):
+      JAGS_BASE=${JAGS_ROOT}
+    else
+      echo "ERROR: non-existant directory specified by JAGS_ROOT:\n${JAGS_ROOT}" >&2
+      exit 1
+    fi
+  fi
 
-# Otherwise try the following default installation paths, in order:
-if [ -z "${JAGS_BASE}" ]; then
+else
+
+  ## If JAGS_ROOT was not set at all then look for it:
   if [ -d "C:/Program Files/JAGS" ]; then
     JAGS_BASE="C:/Program Files/JAGS"
   elif [ -d "C:/Program Files (x86)/JAGS" ]; then
@@ -36,24 +74,29 @@ if [ -z "${JAGS_BASE}" ]; then
   echo "Using auto-detected JAGS_ROOT=${JAGS_BASE}"
 fi
 
-# Get the latest version available (if any):
-JAGS_ROOT=""
-for dir in "$JAGS_BASE"/JAGS-${JAGS_MAJOR}* "$JAGS_BASE"/JAGS~${JAGS_MAJOR}*; do
-  if [ -d "$dir" ]; then
-    JAGS_ROOT="$dir"
-  fi
-done
+# If JAGS_BASE is set then we need to find an appropriate version of JAGS:
+if [ ! -z "${JAGS_BASE}" ]; then
 
-# Otherwise, fail with an error:
-if [ -z "$JAGS_ROOT" ]; then
+  # Get the latest version available (if any):
+  JAGS_ROOT=""
+  for dir in "$JAGS_BASE"/JAGS-${JAGS_MAJOR}* "$JAGS_BASE"/JAGS~${JAGS_MAJOR}*; do
+    if [ -d "$dir" ]; then
+      JAGS_ROOT="$dir"
+    fi
+  done
+
+  # Otherwise, fail with an error:
+  if [ -z "$JAGS_ROOT" ]; then
     echo "ERROR: Could not find a suitable version of JAGS ${JAGS_MAJOR}.x.y" >&2
     echo "under the directory: ${JAGS_BASE}" >&2
     echo "Please install JAGS ${JAGS_MAJOR}.x.y and/or set JAGS_ROOT manually," >&2
     echo "if you have used a non-standard install location." >&2
     exit 1
+  fi
 fi
 
-# Otherwise print an information message and update Makevars.win/ucrt.in:
+
+# If we have succeeded, print an information message and update Makevars.win/ucrt.in:
 echo "Found JAGS version ${JAGS_MAJOR} at: $JAGS_ROOT"
 sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.win.in > src/Makevars.win
 sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.ucrt.in > src/Makevars.ucrt
