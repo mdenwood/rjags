@@ -34,9 +34,6 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
   }
   ## Note: the above code can be removed for rjags_5.x
 
-  ## Add JAGS_MAJOR_VERSION to CPP_FLAGS for packacges:
-  flags[["CPPFLAGS"]] <- paste0(flags[["CPPFLAGS"]], " -DJAGS_MAJOR_VERSION=", as.numeric(flags$JAGS_VERSION[,1]))
-
   type <- match.arg(type)
   value <- c(flags, "ALL"=list(flags))[[type]]
 
@@ -71,7 +68,7 @@ load.pkg.module <- function(pkgname, libname, bin.compat,
     stop("Mismatched JAGS major versions:\n\t", pkgname, ": ", maj.vers.pkg, "\n\trjags: ", maj.vers.rjags, "\n\nThe ", pkgname, " package must either be recompiled or reinstalled\nfollowing recompilation on CRAN.", call.=FALSE)
   }
 
-  ### JAGS_ROOT must match on unix (but not on Windows)
+  ### JAGS_ROOT should match on unix (but not on Windows)
   if (.Platform$OS.type=="unix") {
     jags.root.pkg <- bin.compat[["JAGS_ROOT"]]
     jags.root.rjags <- bin.rjags[["JAGS_ROOT"]]
