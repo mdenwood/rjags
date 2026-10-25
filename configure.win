@@ -41,37 +41,10 @@ if [ ! -z "${JAGS_ROOT}" ]; then
 
   # Normalise path:
   JAGS_ROOT=$(echo "${JAGS_ROOT}" | sed 's/\\/\//g')
-
   echo "... normalised to ${JAGS_ROOT}"
 
-  DD="${JAGS_ROOT}/include"
-  if [ -d "${DD}" ]; then
-    echo "${DD} is present"
-  else
-    echo "${DD} is NOT present"
-  fi
-  DD="${JAGS_ROOT}/include/version.h"
-  if [ -f "${DD}" ]; then
-    echo "${DD} is present"
-  else
-    echo "${DD} is NOT present"
-  fi
-
-  DD="${JAGS_ROOT}/include/JAGS"
-  if [ -d "${DD}" ]; then
-    echo "${DD} is present"
-  else
-    echo "${DD} is NOT present"
-  fi
-  DD="${JAGS_ROOT}/include/JAGS/version.h"
-  if [ -f "${DD}" ]; then
-    echo "${DD} is present"
-  else
-    echo "${DD} is NOT present"
-  fi
-
   # Scrape information from the installed header file (if present):
-  INSTALLED_VERSION_H="${JAGS_ROOT}/include/JAGS/version.h"
+  INSTALLED_VERSION_H="${JAGS_ROOT}/include/version.h"
   if [ -f "${INSTALLED_VERSION_H}" ]; then
     echo "Found ${INSTALLED_VERSION_H}"
     INSTALLED_MAJOR=$(sed -n 's/^#define JAGS_MAJOR  *\([0-9]*\).*/\1/p' "${INSTALLED_VERSION_H}")

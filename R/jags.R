@@ -596,7 +596,11 @@ load.module <- function(name, path, quiet=FALSE)
     }
 
     if (missing(path)) {
-        path = getOption("jags.moddir")
+        if (is.null(getOption("jags.moddir"))) {
+          path <- .rjags_env$DEFAULT_MODDIR
+        } else {
+          path <- getOption("jags.moddir")
+        }
         if (is.null(path)) {
             stop("option jags.moddir is not set")
         }
