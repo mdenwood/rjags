@@ -111,14 +111,14 @@ if [ ! -z "${JAGS_BASE}" ]; then
 fi
 
 # Temporary: we are not updating these yet until the configure script is debugged
-if [ -f "src/Makevars.win" ]; then
+# if [ -f "src/Makevars.win" ]; then
 #    echo "ERROR: src/Makevars.win exists - run cleanup.win and try again" >&2
 #    exit ${FAIL_CODE}
-fi
-if [ -f "src/Makevars.ucrt" ]; then
+# fi
+# if [ -f "src/Makevars.ucrt" ]; then
 #    echo "ERROR: src/Makevars.ucrt exists - run cleanup.win and try again" >&2
 #    exit ${FAIL_CODE}
-fi
+# fi
 
 # If we have succeeded, print an information message and update Makevars.win/ucrt.in:
 echo "Using JAGS version ${JAGS_MAJOR} at: $JAGS_ROOT"
