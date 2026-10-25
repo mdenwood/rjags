@@ -34,6 +34,9 @@ pkg.compile.flags <- function(type = c("ALL", "JAGS_ROOT", "JAGS_VERSION", "RJAG
   }
   ## Note: the above code can be removed for rjags_5.x
 
+  ## Add JAGS_MAJOR_VERSION to CPP_FLAGS for packacges:
+  flags[["CPPFLAGS"]] <- paste0(flags[["CPPFLAGS"]], " -DJAGS_MAJOR_VERSION=", as.numeric(flags$JAGS_VERSION[,1]))
+
   type <- match.arg(type)
   value <- c(flags, "ALL"=list(flags))[[type]]
 
@@ -76,7 +79,7 @@ load.pkg.module <- function(pkgname, libname, bin.compat,
               !is.na(jags.root.pkg),
               length(jags.root.pkg)==1L)
     if (jags.root.pkg != jags.root.rjags) {
-      stop("Mismatched JAGS_ROOT variables:\n\t", pkgname, ": ", jags.root.pkg, "\n\trjags: ", jags.root.rjags, "\n\nThe ", pkgname, " package must either be recompiled or reinstalled\nfollowing recompilation on CRAN.", call.=FALSE)
+      warning("Mismatched JAGS_ROOT variables:\n\t", pkgname, ": ", jags.root.pkg, "\n\trjags: ", jags.root.rjags, "\n\nLoading duplicate symbols may lead to undefined behaviour.\nThe ", pkgname, " package should probably either be recompiled or\nreinstalled following recompilation on CRAN.", call.=FALSE)
     }
   }
 
