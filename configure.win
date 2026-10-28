@@ -18,12 +18,7 @@
 ## deduced parent directory that matches the necessary major version
 ##    - Matt Denwood, 2026-10-24
 
-echo ""
-echo "##### RUNNING CONFIGURE.WIN #####"
-echo ""
-
-# Temporary:
-FAIL_CODE=0
+FAIL_CODE=1
 
 # Extract the JAGS major number from configue.ac:
 if [ -f configure.ac ]; then
@@ -34,38 +29,33 @@ if [ -z "${JAGS_MAJOR}" ]; then
   exit ${FAIL_CODE}
 fi
 
+echo "Attempting to locate JAGS ${JAGS_MAJOR}.x.y..."
+
 # If JAGS_ROOT is non-empty then use it:
 if [ ! -z "${JAGS_ROOT}" ]; then
 
-  echo "Found env var JAGS_ROOT=${JAGS_ROOT}"
-
   # Normalise path:
   JAGS_ROOT=$(echo "${JAGS_ROOT}" | sed 's/\\/\//g')
-  echo "... normalised to ${JAGS_ROOT}"
 
   # Scrape information from the installed header file (if present):
   INSTALLED_VERSION_H="${JAGS_ROOT}/include/version.h"
   if [ -f "${INSTALLED_VERSION_H}" ]; then
-    echo "Found ${INSTALLED_VERSION_H}"
     INSTALLED_MAJOR=$(sed -n 's/^#define JAGS_MAJOR  *\([0-9]*\).*/\1/p' "${INSTALLED_VERSION_H}")
     if [ "${INSTALLED_MAJOR}" == "${JAGS_MAJOR}" ]; then
-      echo "JAGS major version ${INSTALLED_MAJOR} is correct"
       # Ensure JAGS_BASE is not set:
+      echo "Using the provided JAGS_ROOT=${JAGS_ROOT}"
       JAGS_BASE=""
     else
-      echo "JAGS major version ${INSTALLED_MAJOR} is NOT correct"
       # We have JAGS_ROOT set to the wrong version - try going up a directory:
       JAGS_BASE=$(echo "${JAGS_ROOT}" | sed -E 's/\/JAGS-[0-9].*//' | sed -E 's/\/JAGS~[0-9].*//' | sed -E 's/\/JAGS [0-9].*//')
-      echo "The variable JAGS_ROOT is set for the wrong major version (${INSTALLED_MAJOR})"
-      echo "Looking for a JAGS ${JAGS_MAJOR} installation in:\n ${JAGS_BASE}"
+      echo "Note: JAGS ${INSTALLED_MAJOR} found at JAGS_ROOT=${JAGS_ROOT}"
     fi
   else
     if [ -d "${JAGS_ROOT}" ]; then
-      echo "Assuming that ${JAGS_ROOT} is the parent directory"
       # Assume that JAGS_ROOT is set to the parent dir (we will check below):
       JAGS_BASE=${JAGS_ROOT}
     else
-      echo "ERROR: non-existant directory specified by JAGS_ROOT:\n${JAGS_ROOT}" >&2
+      echo "ERROR: non-existant directory specified by JAGS_ROOT: ${JAGS_ROOT}" >&2
       exit ${FAIL_CODE}
     fi
   fi
@@ -83,20 +73,19 @@ else
     echo "if you have used a non-standard install location." >&2
     exit ${FAIL_CODE}
   fi
-  echo "Using auto-detected JAGS_ROOT=${JAGS_BASE}"
+  echo "Using the default JAGS_ROOT=${JAGS_BASE}"
 fi
 
 # If JAGS_BASE is set then we need to find an appropriate version of JAGS:
 if [ ! -z "${JAGS_BASE}" ]; then
 
+  echo "Looking for a JAGS ${JAGS_MAJOR}.x.y installation in:  ${JAGS_BASE}"
+
   # Get the latest version available (if any):
   JAGS_ROOT=""
   for dir in "$JAGS_BASE"/JAGS-${JAGS_MAJOR}* "$JAGS_BASE"/JAGS~${JAGS_MAJOR}*; do
     if [ -d "$dir" ]; then
-      echo "Found ${dir}"
       JAGS_ROOT="$dir"
-    else
-      echo "Non-existant ${dir}"
     fi
   done
 
@@ -110,22 +99,19 @@ if [ ! -z "${JAGS_BASE}" ]; then
   fi
 fi
 
-# Temporary: we are not updating these yet until the configure script is debugged
-# if [ -f "src/Makevars.win" ]; then
-#    echo "ERROR: src/Makevars.win exists - run cleanup.win and try again" >&2
-#    exit ${FAIL_CODE}
-# fi
-# if [ -f "src/Makevars.ucrt" ]; then
-#    echo "ERROR: src/Makevars.ucrt exists - run cleanup.win and try again" >&2
-#    exit ${FAIL_CODE}
-# fi
+if [ -f "src/Makevars.win" ]; then
+  echo "ERROR: src/Makevars.win exists - run cleanup.win and try again" >&2
+  exit ${FAIL_CODE}
+fi
+if [ -f "src/Makevars.ucrt" ]; then
+  echo "ERROR: src/Makevars.ucrt exists - run cleanup.win and try again" >&2
+  exit ${FAIL_CODE}
+fi
 
 # If we have succeeded, print an information message and update Makevars.win/ucrt.in:
-echo "Using JAGS version ${JAGS_MAJOR} at: $JAGS_ROOT"
-#sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.win.in > src/Makevars.win
-#sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.ucrt.in > src/Makevars.ucrt
-# Temporary: actually update Makevars, just so we can see the contents:
-sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.win.in > src/Makevars
+echo "Using the JAGS installation at $JAGS_ROOT"
+sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.win.in > src/Makevars.win
+sed -e "s|@JAGS_ROOT@|"${JAGS_ROOT}"|g" src/Makevars.ucrt.in > src/Makevars.ucrt
 
 if [ ! -f "src/Makevars.win" ]; then
     echo "ERROR: src/Makevars.win was not created" >&2
@@ -135,12 +121,5 @@ if [ ! -f "src/Makevars.ucrt" ]; then
     echo "ERROR: src/Makevars.ucrt was not created" >&2
     exit ${FAIL_CODE}
 fi
-
-echo "src/Makevars.win/ucrt created - contents of Makevars below:\n"
-cat src/Makevars
-
-echo ""
-echo "##### END CONFIGURE.WIN #####"
-echo ""
 
 exit 0
