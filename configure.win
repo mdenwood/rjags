@@ -109,7 +109,7 @@ if [ -f "src/Makevars.ucrt" ]; then
 fi
 
 # If we have succeeded, print an information message and update Makevars.win/ucrt.in:
-echo "Using the JAGS installation at $JAGS_ROOT"
+echo "Configuring Makevars for $JAGS_ROOT"
 sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.win.in > src/Makevars.win
 sed -e "s|@JAGS_ROOT@|${JAGS_ROOT}|g" src/Makevars.ucrt.in > src/Makevars.ucrt
 
@@ -121,9 +121,5 @@ if [ ! -f "src/Makevars.ucrt" ]; then
     echo "ERROR: src/Makevars.ucrt was not created" >&2
     exit ${FAIL_CODE}
 fi
-
-echo "src/Makevars.win/ucrt created - contents of Makevars.ucrt below:"
-cat src/Makevars.ucrt
-echo ""
 
 exit 0
