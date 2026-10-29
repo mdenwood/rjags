@@ -5,11 +5,11 @@
 ##    - Matt Denwood, 2026-10-24
 
 # Ensure immediate evaluation of JAGS_ROOT provided by configure.win
-JAGS_ROOT_ABS := $(abspath "@JAGS_ROOT@")
-JAGS_ROOT_SUBST := $(subst \,/,"@JAGS_ROOT@")
+JAGS_ROOT := "@JAGS_ROOT@"
+JAGS_ROOT_SUBST := $(subst \,/,${JAGS_ROOT})
 
-PKG_LIBS = -L"@JAGS_ROOT@/${R_ARCH}/bin" -ljags-4
+PKG_LIBS = -L"$(JAGS_ROOT_SUBST)/${R_ARCH}/bin" -ljags-4
 PKG_CXXFLAGS =
-PKG_CPPFLAGS = -I"$(JAGS_ROOT_ABS)/include"
+PKG_CPPFLAGS = -I"$(JAGS_ROOT_SUBST)/include"
 
 PKG_CFLAGS = -DRJAGS_CPPFLAGS='$(PKG_CPPFLAGS)' -DRJAGS_CXXFLAGS='$(PKG_CXXFLAGS)' -DRJAGS_LIBS='$(PKG_LIBS)' -DJAGS_ROOT='$(JAGS_ROOT_SUBST)'
