@@ -83,9 +83,21 @@ if [ ! -z "${JAGS_BASE}" ]; then
 
   # Get the latest version available (if any):
   JAGS_ROOT=""
-  for dir in "$JAGS_BASE"/JAGS-${JAGS_MAJOR}* "$JAGS_BASE"/JAGS~${JAGS_MAJOR}*; do
-    if [ -d "$dir" ]; then
-      JAGS_ROOT="$dir"
+  for dir in "${JAGS_BASE}"/JAGS-${JAGS_MAJOR}* "${JAGS_BASE}"/JAGS~${JAGS_MAJOR}*; do
+    if [ -d "${dir}" ]; then
+      # Scrape information from the installed header file (if present):
+      INSTALLED_VERSION_H="${dir}/include/version.h"
+      if [ -f "${INSTALLED_VERSION_H}" ]; then
+        INSTALLED_MAJOR=$(sed -n 's/^#define JAGS_MAJOR  *\([0-9]*\).*/\1/p' "${INSTALLED_VERSION_H}")
+        if [ "${INSTALLED_MAJOR}" == "${JAGS_MAJOR}" ]; then
+          echo "configure: Found JAGS ${INSTALLED_MAJOR} at ${dir}"
+          JAGS_ROOT="$dir"
+        else
+          echo "configure: ${dir} rejected as JAGS version ${INSTALLED_MAJOR}!"
+        fi
+      else
+        echo "configure: ${dir} has no include/version.h!"
+      fi
     fi
   done
 
